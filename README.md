@@ -1,34 +1,104 @@
-# camera
+# Camera Float
 
-An Electron application with Vue and TypeScript
+Camera Float 是一款面向演示、直播和远程协作的桌面工具。它把摄像头画面作为可自由移动的悬浮窗口显示，并提供独立的桌面标注层，方便在共享屏幕时同时展示自己和讲解内容。
 
-## Recommended IDE Setup
+## 功能
 
-- [VSCode](https://code.visualstudio.com/) + [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) + [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar)
+### 悬浮摄像头
 
-## Project Setup
+| 功能         | 说明                                                                 |
+| ------------ | -------------------------------------------------------------------- |
+| 摄像头选择   | 可切换系统已识别的摄像头设备。                                       |
+| 独立悬浮窗口 | 摄像头画面可拖动，支持滚轮或滑杆调节窗口大小。                       |
+| 外观控制     | 支持圆形、方形和圆角形态，以及镜像、透明度、边框和阴影。             |
+| 置顶控制     | 可将摄像头窗口保持在最前方，也可通过托盘菜单显示、隐藏或重置窗口。   |
+| 设置同步     | 摄像头外观设置会在画面窗口与工具栏间同步，并保留窗口位置与置顶状态。 |
 
-### Install
+### 桌面标注
+
+| 功能         | 说明                                                 |
+| ------------ | ---------------------------------------------------- |
+| 多显示器选择 | 单屏时直接开始；多屏时先选择目标显示器。             |
+| 标注工具     | 画笔、荧光笔、直线、箭头、矩形、椭圆、文字和橡皮擦。 |
+| 编辑能力     | 可选颜色与线宽，支持撤销、重做和清空。               |
+| 鼠标穿透     | 退出绘制状态后，覆盖层继续显示笔迹但不拦截鼠标。     |
+| 图层控制     | 可隐藏或恢复标注层，当前会话中的笔迹和历史会保留。   |
+
+标注只保存在当前会话。关闭标注会话后，笔迹不会保存到文件。
+
+## 快捷键
+
+| 快捷键                           | 操作                                 |
+| -------------------------------- | ------------------------------------ |
+| `Command/Ctrl + Shift + C`       | 显示或隐藏摄像头窗口                 |
+| `Command/Ctrl + Shift + T`       | 切换摄像头窗口置顶                   |
+| `Command/Ctrl + Shift + M`       | 切换摄像头镜像                       |
+| `Command/Ctrl + Shift + +` / `-` | 放大 / 缩小摄像头窗口                |
+| `Command/Ctrl + Shift + A`       | 开始标注，或在绘制与鼠标穿透之间切换 |
+| `Command/Ctrl + Shift + X`       | 清空当前标注                         |
+| `Command/Ctrl + Alt + X`         | 关闭标注会话                         |
+| `Esc`                            | 在标注窗口中切换为鼠标穿透           |
+
+## 技术栈
+
+| 层级       | 技术                                | 用途                                                 |
+| ---------- | ----------------------------------- | ---------------------------------------------------- |
+| 桌面运行时 | Electron                            | 创建摄像头、工具栏、标注覆盖层与托盘菜单等原生窗口。 |
+| 前端界面   | Vue 3 + TypeScript                  | 实现摄像头预览、工具栏和标注界面。                   |
+| 状态管理   | Pinia                               | 管理摄像头外观与设备选择等渲染进程状态。             |
+| 标注渲染   | 原生 Canvas 2D                      | 绘制笔迹、形状、文字和橡皮擦效果，无额外绘图库依赖。 |
+| 进程通信   | `contextBridge` + IPC               | 以受控接口连接渲染进程与 Electron 主进程。           |
+| 跨窗口同步 | `BroadcastChannel` + `localStorage` | 同步摄像头画面窗口与独立工具栏的设置。               |
+| 构建工具   | electron-vite + Vite                | 构建主进程、预加载脚本和 Vue 渲染界面。              |
+| 安装包     | electron-builder                    | 生成 macOS、Windows 和 Linux 安装包。                |
+| 质量工具   | ESLint + Prettier + vue-tsc         | 提供代码检查、格式化和类型检查。                     |
+
+## 本地开发
+
+### 环境要求
+
+- Node.js 22
+- Corepack（用于管理 pnpm）
+- 可用的摄像头设备
+
+在 macOS 上使用多显示器缩略图或桌面标注前，需要在系统设置中授予应用屏幕录制权限。
+
+### 安装依赖
 
 ```bash
-$ pnpm install
+corepack enable
+pnpm install
 ```
 
-### Development
+### 启动开发环境
 
 ```bash
-$ pnpm dev
+pnpm dev
 ```
 
-### Build
+### 检查与构建
 
 ```bash
-# For windows
-$ pnpm build:win
-
-# For macOS
-$ pnpm build:mac
-
-# For Linux
-$ pnpm build:linux
+pnpm lint
+pnpm typecheck
+pnpm build
 ```
+
+### 打包
+
+```bash
+# macOS
+pnpm build:mac
+
+# Windows
+pnpm build:win
+
+# Linux
+pnpm build:linux
+```
+
+打包产物默认位于 `dist/` 目录。
+
+## 当前验证范围
+
+摄像头窗口和标注功能已在单屏 macOS 环境完成基础验证。多显示器、Windows 高 DPI，以及 Windows/Linux 的鼠标穿透和屏幕缩略图行为仍需在对应实机环境回归验证。

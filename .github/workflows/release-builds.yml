@@ -3,13 +3,13 @@ name: Build release artifacts
 on:
   push:
     branches:
-      - '**'
+      - main
 
 permissions:
   contents: write
 
 concurrency:
-  group: release-builds-${{ github.ref }}
+  group: release-builds-main
   cancel-in-progress: false
 
 jobs:
@@ -18,6 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.metadata.outputs.tag }}
+      version: ${{ steps.metadata.outputs.version }}
 
     steps:
       - name: Prepare release metadata
@@ -25,25 +26,42 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
-          REF_NAME: ${{ github.ref_name }}
           SHA: ${{ github.sha }}
         shell: bash
         run: |
           set -euo pipefail
 
-          short_sha="${SHA::7}"
-          safe_ref="$(printf '%s' "$REF_NAME" | tr '/ ' '--' | tr -cd '[:alnum:]._-')"
-          tag="build-${safe_ref}-${short_sha}"
-          title="Camera build ${safe_ref} ${short_sha}"
+          version="$(
+            gh api --paginate "repos/${REPOSITORY}/releases?per_page=100" --jq '.[].tag_name' |
+              node -e '
+                const tags = require("fs").readFileSync(0, "utf8").trim().split(/\s+/)
+                const versions = tags
+                  .map((tag) => tag.match(/^v(\d+)\.(\d+)\.(\d+)$/))
+                  .filter(Boolean)
+                  .map((match) => match.slice(1).map(Number))
+                const latest = versions.reduce(
+                  (current, candidate) => {
+                    if (!current) return candidate
+                    const differingIndex = candidate.findIndex(
+                      (part, index) => part !== current[index]
+                    )
+                    return differingIndex >= 0 && candidate[differingIndex] > current[differingIndex]
+                      ? candidate
+                      : current
+                  },
+                  null
+                ) ?? [1, 0, 0]
+                console.log(`${latest[0]}.${latest[1]}.${latest[2] + 1}`)
+              '
+          )"
+          tag="v${version}"
+          title="Camera Float ${tag}"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
 
           notes="$(mktemp)"
           cat > "$notes" <<EOF_NOTES
-          Automated Electron build for \`${REF_NAME}\`.
-
-          Commit: \`${SHA}\`
-
-          Includes macOS Intel, macOS Apple Silicon, Windows x64, and Linux x64 artifacts.
+          Building release ${tag} from \`${SHA}\`.
           EOF_NOTES
 
           if ! gh release view "$tag" --repo "$REPOSITORY" >/dev/null 2>&1; then
@@ -53,7 +71,6 @@ jobs:
               --title "$title" \
               --notes-file "$notes" \
               --draft \
-              --prerelease \
               --latest=false
           fi
 
@@ -105,6 +122,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Set release version
+        env:
+          RELEASE_VERSION: ${{ needs.prepare-release.outputs.version }}
+        run: npm pkg set version="$RELEASE_VERSION"
+
       - name: Build application
         run: pnpm run build
 
@@ -122,7 +144,7 @@ jobs:
           set -euo pipefail
 
           shopt -s nullglob
-          assets=(dist/*.AppImage dist/*.deb dist/*.dmg dist/*.exe dist/*.zip)
+          assets=(dist/camera-*.AppImage dist/camera-*.deb dist/camera-*.dmg dist/camera-*.exe)
           if [ "${#assets[@]}" -eq 0 ]; then
             echo "No release assets found."
             exit 1
@@ -143,11 +165,44 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
           RELEASE_TAG: ${{ needs.prepare-release.outputs.tag }}
+          RELEASE_VERSION: ${{ needs.prepare-release.outputs.version }}
+          SHA: ${{ github.sha }}
         shell: bash
         run: |
           set -euo pipefail
+
+          assets="$(gh release view "$RELEASE_TAG" --repo "$REPOSITORY" --json assets)"
+          notes="$(mktemp)"
+
+          ASSETS="$assets" node <<'NODE' > "$notes"
+          const { assets } = JSON.parse(process.env.ASSETS)
+          const repository = process.env.REPOSITORY
+          const tag = process.env.RELEASE_TAG
+          const version = process.env.RELEASE_VERSION
+          const sha = process.env.SHA
+
+          function assetLink(pattern, label) {
+            const asset = assets.find(({ name }) => pattern.test(name))
+            if (!asset) throw new Error(`Missing release asset matching ${pattern}`)
+            const filename = encodeURIComponent(asset.name)
+            return `[${label}](https://github.com/${repository}/releases/download/${tag}/${filename})`
+          }
+
+          console.log(`## Camera Float v${version}`)
+          console.log('')
+          console.log('| 平台 | 架构 | 下载 |')
+          console.log('| --- | --- | --- |')
+          console.log(`| macOS | Apple Silicon (arm64) | ${assetLink(/-mac-arm64\.dmg$/, 'DMG')} |`)
+          console.log(`| macOS | Intel (x64) | ${assetLink(/-mac-x64\.dmg$/, 'DMG')} |`)
+          console.log(`| Windows | x64 | ${assetLink(/-windows-x64-setup\.exe$/, 'Installer')} |`)
+          console.log(`| Linux | x64 | ${assetLink(/-linux-x64\.AppImage$/, 'AppImage')} / ${assetLink(/-linux-x64\.deb$/, 'Deb')} |`)
+          console.log('')
+          console.log(`构建提交：[\`${sha.slice(0, 7)}\`](https://github.com/${repository}/commit/${sha})`)
+          NODE
+
           gh release edit "$RELEASE_TAG" \
             --repo "$REPOSITORY" \
+            --title "Camera Float v${RELEASE_VERSION}" \
+            --notes-file "$notes" \
             --draft=false \
-            --prerelease \
-            --latest=false
+            --latest

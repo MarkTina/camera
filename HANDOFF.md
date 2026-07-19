@@ -26,7 +26,7 @@
 - `Esc` 进入鼠标穿透，`Command/Ctrl+Alt+X` 可全局关闭标注。
 - 标注只保存在当前会话内；切换鼠标穿透会保留，关闭会话会丢弃。
 - macOS 未授予屏幕录制权限时无法取得屏幕缩略图，选择器会显示占位状态，但仍可按屏幕信息选择。
-- Release 工作流由各平台直接上传安装包到草稿 Release，全部构建成功后再发布，不依赖 GitHub Actions Artifact 存储额度。
+- Release 工作流仅在 `main` 推送时运行：从既有 Release 自动递增补丁版本，构建时写入应用版本，所有平台产物上传到草稿 Release，构建完成后以平台/架构下载表格发布，不依赖 GitHub Actions Artifact 存储额度。
 - App 运行时图标与 macOS、Windows、Linux 打包图标统一由 `camera-icon.png` 源图生成。
 - 2026-07-15 已在单屏 macOS 环境实测通过摄像头黑边、拖动缩放干扰和同屏标注黑屏修复；多屏和 Windows/Linux 实机行为尚未验证。
 - 2026-07-17 已将 Windows 摄像头拖动坐标统一为主进程 DIP 坐标，并在拖动期间锁定起始宽高，避免 DPI 调整放大窗口；本地构建通过，尚待 Windows 实机验证。
@@ -69,9 +69,17 @@
 - **影响**: 旧提交、Release 和标签不再可通过仓库引用访问；后续提交使用 GitHub 账号 `MarkTina` 的隐私邮箱。
 - **日期**: 2026-07-19。
 
+### DR-20260719-02: 自动化语义化 Release
+
+- **背景**: 原工作流以分支和提交哈希命名 Release，版本不可连续识别，下载资产也缺少平台与架构指引。
+- **决策**: 仅在 `main` 推送时串行创建稳定 Release，从最高 `v主.次.补丁` 自动递增补丁版本，并在正文生成资产下载表格。
+- **原因**: 既能让每次正式发布拥有连续版本号，也避免测试分支占用版本号或并发发布重复版本。
+- **影响**: 首个新 Release 为 `v1.0.1`；版本变更由 CI 在构建工作区写入，源码中的基准版本保持 `1.0.0`。
+- **日期**: 2026-07-19。
+
 <!-- fresh-meta
 last-updated: 2026-07-19
-trigger-reason: 重置 Git 历史并移除旧发布记录
+trigger-reason: 改造为连续版本与平台下载表格的 Release 工作流
 updated-by: handoff-maintainer
-next-review: 完成新的版本化 Release 工作流后
+next-review: 首个版本化 Release 构建完成后
 -->
