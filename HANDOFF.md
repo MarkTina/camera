@@ -31,6 +31,7 @@
 - 2026-07-15 已在单屏 macOS 环境实测通过摄像头黑边、拖动缩放干扰和同屏标注黑屏修复；多屏和 Windows/Linux 实机行为尚未验证。
 - 2026-07-17 已将 Windows 摄像头拖动坐标统一为主进程 DIP 坐标，并在拖动期间锁定起始宽高，避免 DPI 调整放大窗口；本地构建通过，尚待 Windows 实机验证。
 - 2026-07-19 已重置 Git 历史为单一根提交，并删除此前的 GitHub Release 与构建标签；后续发布从新的提交历史重新开始。
+- 2026-07-19 已发布稳定版 GitHub Release `v1.0.1`，包含 macOS Apple Silicon/Intel、Windows x64 以及 Linux x64 的 AppImage/Deb 资产，并提供平台与架构下载表格。
 - Windows 不支持 macOS 式多级 topmost 层级；绘制层聚焦后改为显式恢复摄像头与工具栏顺序，尚待 Windows 安装包实测。
 
 ## 演进方向
@@ -79,7 +80,7 @@
 
 <!-- fresh-meta
 last-updated: 2026-07-19
-trigger-reason: 改造为连续版本与平台下载表格的 Release 工作流
+trigger-reason: 首个版本化 Release 构建与发布通过
 updated-by: handoff-maintainer
-next-review: 首个版本化 Release 构建完成后
+next-review: 下一次 main 发布生成新版本时
 -->
