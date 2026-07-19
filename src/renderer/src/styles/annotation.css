@@ -1,0 +1,245 @@
+.display-picker-page {
+  min-height: 100%;
+  padding: 28px;
+  color: #18202b;
+  background: #f4f5f7;
+  user-select: none;
+}
+
+.display-picker-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.display-picker-header h1 {
+  margin: 0 0 6px;
+  font-size: 24px;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.display-picker-header p {
+  margin: 0;
+  color: #667085;
+  font-size: 13px;
+}
+
+.picker-close {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 6px;
+  color: #475467;
+  background: #e8eaee;
+  cursor: pointer;
+  font-size: 22px;
+}
+
+.display-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 18px;
+}
+
+.display-option {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  padding: 0;
+  color: inherit;
+  background: #ffffff;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(16, 24, 40, 0.08);
+}
+
+.display-option:hover,
+.display-option:focus-visible {
+  border-color: #1677ff;
+  outline: 2px solid rgba(22, 119, 255, 0.16);
+}
+
+.display-thumbnail {
+  aspect-ratio: 16 / 10;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: #667085;
+  background: #20242a;
+  font-size: 13px;
+}
+
+.display-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.display-details {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 5px 12px;
+  padding: 14px 16px;
+  color: #667085;
+  font-size: 12px;
+}
+
+.display-details strong {
+  overflow: hidden;
+  color: #18202b;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.primary-badge {
+  justify-self: end;
+  border-radius: 4px;
+  padding: 2px 6px;
+  color: #075985;
+  background: #e0f2fe;
+}
+
+.picker-status {
+  display: grid;
+  min-height: 280px;
+  place-items: center;
+  color: #667085;
+}
+
+.picker-status.error {
+  color: #b42318;
+}
+
+.annotation-surface,
+.annotation-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.annotation-surface {
+  overflow: hidden;
+  background: transparent;
+}
+
+.annotation-canvas {
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.annotation-surface.passthrough .annotation-canvas {
+  cursor: default;
+}
+
+.annotation-text-editor {
+  position: absolute;
+  z-index: 2;
+  width: min(320px, calc(100vw - 24px));
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 6px;
+  padding: 8px;
+  outline: 2px solid rgba(0, 0, 0, 0.28);
+  background: rgba(20, 24, 30, 0.78);
+  font: 600 20px/1.35 sans-serif;
+}
+
+.annotation-toolbar {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  color: #f8fafc;
+  background: rgba(24, 28, 34, 0.94);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.34);
+  user-select: none;
+}
+
+.annotation-tool-group,
+.annotation-color-group,
+.annotation-history-group,
+.annotation-command-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.annotation-color-group,
+.annotation-history-group,
+.annotation-command-group,
+.annotation-width {
+  padding-left: 7px;
+  border-left: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.annotation-toolbar button {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 6px;
+  color: #e5e7eb;
+  background: rgba(255, 255, 255, 0.09);
+  cursor: pointer;
+}
+
+.annotation-toolbar button:not(.color-swatch):hover,
+.annotation-toolbar button:not(.color-swatch).active {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.annotation-toolbar button:disabled {
+  cursor: default;
+  opacity: 0.36;
+}
+
+.annotation-toolbar button.danger:hover {
+  background: #c9362b;
+}
+
+.annotation-toolbar .color-swatch {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--swatch-color);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.42);
+}
+
+.annotation-toolbar .color-swatch:hover {
+  transform: scale(1.08);
+}
+
+.annotation-toolbar .color-swatch.active {
+  background: var(--swatch-color);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.55),
+    0 0 0 2px #111827,
+    0 0 0 4px #ffffff;
+}
+
+.annotation-width {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+}
+
+.annotation-width input {
+  width: 70px;
+  accent-color: #ffffff;
+}

@@ -1,0 +1,153 @@
+name: Build release artifacts
+
+on:
+  push:
+    branches:
+      - '**'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-builds-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  prepare-release:
+    name: Prepare draft release
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.metadata.outputs.tag }}
+
+    steps:
+      - name: Prepare release metadata
+        id: metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          REF_NAME: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          short_sha="${SHA::7}"
+          safe_ref="$(printf '%s' "$REF_NAME" | tr '/ ' '--' | tr -cd '[:alnum:]._-')"
+          tag="build-${safe_ref}-${short_sha}"
+          title="Camera build ${safe_ref} ${short_sha}"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+          notes="$(mktemp)"
+          cat > "$notes" <<EOF_NOTES
+          Automated Electron build for \`${REF_NAME}\`.
+
+          Commit: \`${SHA}\`
+
+          Includes macOS Intel, macOS Apple Silicon, Windows x64, and Linux x64 artifacts.
+          EOF_NOTES
+
+          if ! gh release view "$tag" --repo "$REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$tag" \
+              --repo "$REPOSITORY" \
+              --target "$SHA" \
+              --title "$title" \
+              --notes-file "$notes" \
+              --draft \
+              --prerelease \
+              --latest=false
+          fi
+
+  build:
+    name: Build ${{ matrix.name }}
+    needs: prepare-release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: mac-x64
+            os: macos-15-intel
+            args: --mac --x64
+          - name: mac-arm64
+            os: macos-26
+            args: --mac --arm64
+          - name: windows-x64
+            os: windows-latest
+            args: --win --x64
+          - name: linux-x64
+            os: ubuntu-latest
+            args: --linux AppImage deb --x64
+
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        shell: bash
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.7.0 --activate
+
+      - name: Install Linux package prerequisites
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libarchive-tools
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build application
+        run: pnpm run build
+
+      - name: Package Electron app
+        shell: bash
+        run: pnpm exec electron-builder ${{ matrix.args }} --publish never
+
+      - name: Upload packaged assets to draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.prepare-release.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          shopt -s nullglob
+          assets=(dist/*.AppImage dist/*.deb dist/*.dmg dist/*.exe dist/*.zip)
+          if [ "${#assets[@]}" -eq 0 ]; then
+            echo "No release assets found."
+            exit 1
+          fi
+
+          gh release upload "$RELEASE_TAG" "${assets[@]}" \
+            --repo "$REPOSITORY" \
+            --clobber
+
+  release:
+    name: Publish GitHub release
+    runs-on: ubuntu-latest
+    needs: [prepare-release, build]
+
+    steps:
+      - name: Publish completed release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.prepare-release.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release edit "$RELEASE_TAG" \
+            --repo "$REPOSITORY" \
+            --draft=false \
+            --prerelease \
+            --latest=false
