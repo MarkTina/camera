@@ -196,7 +196,7 @@ jobs:
           console.log(`| macOS | Apple Silicon (arm64) | ${assetLink(/-mac-arm64\.dmg$/, 'DMG')} |`)
           console.log(`| macOS | Intel (x64) | ${assetLink(/-mac-x64\.dmg$/, 'DMG')} |`)
           console.log(`| Windows | x64 | ${assetLink(/-windows-x64-setup\.exe$/, 'Installer')} |`)
-          console.log(`| Linux | x64 | ${assetLink(/-linux-x64\.AppImage$/, 'AppImage')} / ${assetLink(/-linux-x64\.deb$/, 'Deb')} |`)
+          console.log(`| Linux | x64 | ${assetLink(/-linux-(x86_64|x64)\.AppImage$/, 'AppImage')} / ${assetLink(/-linux-(amd64|x64)\.deb$/, 'Deb')} |`)
           console.log('')
           console.log(`构建提交：[\`${sha.slice(0, 7)}\`](https://github.com/${repository}/commit/${sha})`)
           NODE
