@@ -125,7 +125,8 @@ jobs:
       - name: Set release version
         env:
           RELEASE_VERSION: ${{ needs.prepare-release.outputs.version }}
-        run: npm pkg set version="$RELEASE_VERSION"
+        run: >-
+          node -e "const fs = require('fs'); const file = 'package.json'; const packageJson = JSON.parse(fs.readFileSync(file, 'utf8')); packageJson.version = process.env.RELEASE_VERSION; fs.writeFileSync(file, JSON.stringify(packageJson, null, 2) + '\n')"
 
       - name: Build application
         run: pnpm run build
