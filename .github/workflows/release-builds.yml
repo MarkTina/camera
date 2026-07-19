@@ -182,21 +182,31 @@ jobs:
           const version = process.env.RELEASE_VERSION
           const sha = process.env.SHA
 
-          function assetLink(pattern, label) {
+          function assetUrl(pattern) {
             const asset = assets.find(({ name }) => pattern.test(name))
             if (!asset) throw new Error(`Missing release asset matching ${pattern}`)
             const filename = encodeURIComponent(asset.name)
-            return `[${label}](https://github.com/${repository}/releases/download/${tag}/${filename})`
+            return `https://github.com/${repository}/releases/download/${tag}/${filename}`
+          }
+
+          function badge(label, color, logo) {
+            const logoQuery = logo ? `&logo=${encodeURIComponent(logo)}&logoColor=white` : ''
+            return `![${label}](https://img.shields.io/badge/${encodeURIComponent(label)}-${color}?style=flat-square${logoQuery})`
+          }
+
+          function downloadBadges(pattern, type, typeColor, architecture, architectureColor, logo) {
+            const url = assetUrl(pattern)
+            return `[${badge(type, typeColor, logo)}](${url}) [${badge(architecture, architectureColor)}](${url})`
           }
 
           console.log(`## Camera Float v${version}`)
           console.log('')
-          console.log('| 平台 | 架构 | 下载 |')
-          console.log('| --- | --- | --- |')
-          console.log(`| macOS | Apple Silicon (arm64) | ${assetLink(/-mac-arm64\.dmg$/, 'DMG')} |`)
-          console.log(`| macOS | Intel (x64) | ${assetLink(/-mac-x64\.dmg$/, 'DMG')} |`)
-          console.log(`| Windows | x64 | ${assetLink(/-windows-x64-setup\.exe$/, 'Installer')} |`)
-          console.log(`| Linux | x64 | ${assetLink(/-linux-(x86_64|x64)\.AppImage$/, 'AppImage')} / ${assetLink(/-linux-(amd64|x64)\.deb$/, 'Deb')} |`)
+          console.log('| 平台 | 下载 |')
+          console.log('| --- | --- |')
+          console.log(`| macOS | ${downloadBadges(/-mac-arm64\.dmg$/, 'DMG', '555', 'Apple Silicon', '111', 'apple')} |`)
+          console.log(`| macOS | ${downloadBadges(/-mac-x64\.dmg$/, 'DMG', '555', 'Intel x64', '0ea5e9', 'apple')} |`)
+          console.log(`| Windows | ${downloadBadges(/-windows-x64-setup\.exe$/, 'Installer', '555', 'x64', '0078d4', 'windows')} |`)
+          console.log(`| Linux | ${downloadBadges(/-linux-(x86_64|x64)\.AppImage$/, 'AppImage', '555', 'x64', 'e95420', 'linux')} ${downloadBadges(/-linux-(amd64|x64)\.deb$/, 'Deb', '555', 'x64', 'a80030', 'debian')} |`)
           console.log('')
           console.log(`构建提交：[\`${sha.slice(0, 7)}\`](https://github.com/${repository}/commit/${sha})`)
           NODE
