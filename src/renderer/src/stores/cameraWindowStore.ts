@@ -9,6 +9,9 @@ interface CameraWindowSettings {
   opacity: number
   hasBorder: boolean
   hasShadow: boolean
+  cropZoom: number
+  cropOffsetX: number
+  cropOffsetY: number
 }
 
 const STORAGE_KEY = 'camera-window-settings'
@@ -19,7 +22,10 @@ const DEFAULT_SETTINGS: CameraWindowSettings = {
   selectedDeviceId: '',
   opacity: 100,
   hasBorder: true,
-  hasShadow: false
+  hasShadow: false,
+  cropZoom: 1,
+  cropOffsetX: 0,
+  cropOffsetY: 0
 }
 
 function readStoredSettings(): Partial<CameraWindowSettings> {
@@ -59,6 +65,9 @@ export const useCameraWindowStore = defineStore('cameraWindow', {
       this.opacity = settings.opacity ?? DEFAULT_SETTINGS.opacity
       this.hasBorder = settings.hasBorder ?? DEFAULT_SETTINGS.hasBorder
       this.hasShadow = settings.hasShadow ?? DEFAULT_SETTINGS.hasShadow
+      this.cropZoom = settings.cropZoom ?? DEFAULT_SETTINGS.cropZoom
+      this.cropOffsetX = settings.cropOffsetX ?? DEFAULT_SETTINGS.cropOffsetX
+      this.cropOffsetY = settings.cropOffsetY ?? DEFAULT_SETTINGS.cropOffsetY
     },
     persistSettings(): void {
       const settings: CameraWindowSettings = {
@@ -67,7 +76,10 @@ export const useCameraWindowStore = defineStore('cameraWindow', {
         selectedDeviceId: this.selectedDeviceId,
         opacity: this.opacity,
         hasBorder: this.hasBorder,
-        hasShadow: this.hasShadow
+        hasShadow: this.hasShadow,
+        cropZoom: this.cropZoom,
+        cropOffsetX: this.cropOffsetX,
+        cropOffsetY: this.cropOffsetY
       }
 
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))
@@ -99,6 +111,33 @@ export const useCameraWindowStore = defineStore('cameraWindow', {
     toggleShadow(): void {
       this.hasShadow = !this.hasShadow
       this.persistSettings()
+    },
+    setCropZoom(zoom: number): void {
+      this.cropZoom = Math.min(3, Math.max(1, zoom))
+      this.clampCropOffsets()
+      this.persistSettings()
+    },
+    setCropOffset(axis: 'x' | 'y', offset: number): void {
+      const maxOffset = (this.cropZoom - 1) * 50
+      const nextOffset = Math.min(maxOffset, Math.max(-maxOffset, offset))
+
+      if (axis === 'x') {
+        this.cropOffsetX = nextOffset
+      } else {
+        this.cropOffsetY = nextOffset
+      }
+      this.persistSettings()
+    },
+    resetCrop(): void {
+      this.cropZoom = DEFAULT_SETTINGS.cropZoom
+      this.cropOffsetX = DEFAULT_SETTINGS.cropOffsetX
+      this.cropOffsetY = DEFAULT_SETTINGS.cropOffsetY
+      this.persistSettings()
+    },
+    clampCropOffsets(): void {
+      const maxOffset = (this.cropZoom - 1) * 50
+      this.cropOffsetX = Math.min(maxOffset, Math.max(-maxOffset, this.cropOffsetX))
+      this.cropOffsetY = Math.min(maxOffset, Math.max(-maxOffset, this.cropOffsetY))
     }
   }
 })

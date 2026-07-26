@@ -8,7 +8,17 @@ import { useCameraWindowStore } from '../stores/cameraWindowStore'
 const videoElement = ref<HTMLVideoElement | null>(null)
 const isDragging = ref(false)
 const cameraStore = useCameraWindowStore()
-const { shape, isMirrored, selectedDeviceId, opacity, hasBorder, hasShadow } =
+const {
+  shape,
+  isMirrored,
+  selectedDeviceId,
+  opacity,
+  hasBorder,
+  hasShadow,
+  cropZoom,
+  cropOffsetX,
+  cropOffsetY
+} =
   storeToRefs(cameraStore)
 const { errorMessage, isLoading, startCamera } = useCameraStream()
 const { beginDrag, dragTo, endDrag, resizeFromWheel, setToolbarHovered } = useWindowControls()
@@ -25,6 +35,9 @@ const frameStyle = computed(() => ({
 }))
 const videoClasses = computed(() => ({
   'is-mirrored': isMirrored.value
+}))
+const videoStyle = computed(() => ({
+  transform: `${isMirrored.value ? 'scaleX(-1) ' : ''}translate(${cropOffsetX.value}%, ${cropOffsetY.value}%) scale(${cropZoom.value})`
 }))
 
 async function attachCamera(): Promise<void> {
@@ -123,6 +136,7 @@ watch(selectedDeviceId, () => {
         ref="videoElement"
         class="camera-video"
         :class="videoClasses"
+        :style="videoStyle"
         autoplay
         muted
         playsinline

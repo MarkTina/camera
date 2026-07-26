@@ -1,13 +1,23 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useCameraStream } from '../composables/useCameraStream'
 import { useWindowControls } from '../composables/useWindowControls'
 import { useCameraWindowStore, type CameraShape } from '../stores/cameraWindowStore'
 
 const cameraStore = useCameraWindowStore()
-const { shape, isMirrored, isAlwaysOnTop, selectedDeviceId, opacity, hasBorder, hasShadow } =
-  storeToRefs(cameraStore)
+const {
+  shape,
+  isMirrored,
+  isAlwaysOnTop,
+  selectedDeviceId,
+  opacity,
+  hasBorder,
+  hasShadow,
+  cropZoom,
+  cropOffsetX,
+  cropOffsetY
+} = storeToRefs(cameraStore)
 const { closeWindow, getAlwaysOnTop, getSizeState, setAlwaysOnTop, setSize, setToolbarHovered } =
   useWindowControls()
 const { videoDevices, refreshVideoDevices } = useCameraStream()
@@ -15,6 +25,7 @@ const cameraSize = ref(320)
 const minCameraSize = ref(180)
 const maxCameraSize = ref(540)
 const annotationSessionOpen = ref(false)
+const isCropEditing = ref(false)
 let removeAnnotationSessionListener: (() => void) | null = null
 let removeSizeStateListener: (() => void) | null = null
 
@@ -35,6 +46,16 @@ function handleDeviceChange(event: Event): void {
 function handleOpacityInput(event: Event): void {
   cameraStore.setOpacity(Number((event.target as HTMLInputElement).value))
 }
+
+function handleCropZoomInput(event: Event): void {
+  cameraStore.setCropZoom(Number((event.target as HTMLInputElement).value))
+}
+
+function handleCropOffsetInput(axis: 'x' | 'y', event: Event): void {
+  cameraStore.setCropOffset(axis, Number((event.target as HTMLInputElement).value))
+}
+
+const cropOffsetLimit = computed(() => (cropZoom.value - 1) * 50)
 
 async function syncCameraSize(): Promise<void> {
   const state = await getSizeState()
@@ -140,9 +161,19 @@ onBeforeUnmount(() => {
       >
         顶
       </button>
+
+      <button
+        type="button"
+        :class="{ active: isCropEditing }"
+        :title="isCropEditing ? '完成画面裁剪' : '调整画面裁剪'"
+        :aria-pressed="isCropEditing"
+        @click="isCropEditing = !isCropEditing"
+      >
+        裁
+      </button>
     </div>
 
-    <div class="camera-toolbar-row">
+    <div v-if="!isCropEditing" class="camera-toolbar-row">
       <label class="toolbar-range" title="窗口透明度">
         <span>透</span>
         <input
@@ -201,6 +232,54 @@ onBeforeUnmount(() => {
       </button>
 
       <button type="button" class="danger" title="关闭窗口" @click="closeWindow">关</button>
+    </div>
+
+    <div v-else class="camera-toolbar-row">
+      <label class="toolbar-range" title="放大画面以裁去黑边">
+        <span>放</span>
+        <input
+          type="range"
+          min="1"
+          max="3"
+          step="0.05"
+          :value="cropZoom"
+          aria-label="裁剪缩放"
+          @input="handleCropZoomInput"
+          @pointerdown.stop
+        />
+      </label>
+
+      <label class="toolbar-range" title="水平移动裁剪区域">
+        <span>横</span>
+        <input
+          type="range"
+          :min="-cropOffsetLimit"
+          :max="cropOffsetLimit"
+          step="0.5"
+          :value="cropOffsetX"
+          aria-label="水平移动裁剪区域"
+          :disabled="cropZoom === 1"
+          @input="handleCropOffsetInput('x', $event)"
+          @pointerdown.stop
+        />
+      </label>
+
+      <label class="toolbar-range" title="垂直移动裁剪区域">
+        <span>竖</span>
+        <input
+          type="range"
+          :min="-cropOffsetLimit"
+          :max="cropOffsetLimit"
+          step="0.5"
+          :value="cropOffsetY"
+          aria-label="垂直移动裁剪区域"
+          :disabled="cropZoom === 1"
+          @input="handleCropOffsetInput('y', $event)"
+          @pointerdown.stop
+        />
+      </label>
+
+      <button type="button" title="恢复完整画面" @click="cameraStore.resetCrop">复</button>
     </div>
   </nav>
 </template>
