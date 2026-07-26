@@ -1,6 +1,7 @@
 import { app, screen } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { registerWindowControlHandlers } from './ipc/windowControl'
+import { registerPhoneCameraControlHandlers } from './ipc/phoneCameraControl'
 import { registerAnnotationControlHandlers } from './ipc/annotationControl'
 import { createFloatingCameraWindow } from './windows/floatingCameraWindow'
 import { repositionAnnotationWindows } from './windows/annotationWindows'
@@ -22,6 +23,7 @@ app.whenReady().then(() => {
   })
 
   registerWindowControlHandlers()
+  registerPhoneCameraControlHandlers()
   registerAnnotationControlHandlers()
 
   createFloatingCameraWindow()

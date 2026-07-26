@@ -5,6 +5,7 @@ import FloatingToolbar from './components/FloatingToolbar.vue'
 import DisplayPicker from './components/DisplayPicker.vue'
 import AnnotationCanvas from './components/AnnotationCanvas.vue'
 import AnnotationToolbar from './components/AnnotationToolbar.vue'
+import PhoneCameraDialog from './components/PhoneCameraDialog.vue'
 import { onCameraWindowSettingsChange, useCameraWindowStore } from './stores/cameraWindowStore'
 
 const cameraStore = useCameraWindowStore()
@@ -44,4 +45,5 @@ onBeforeUnmount(() => {
   <DisplayPicker v-else-if="mode === 'display-picker'" />
   <AnnotationCanvas v-else-if="mode === 'annotation'" />
   <AnnotationToolbar v-else-if="mode === 'annotation-toolbar'" />
+  <PhoneCameraDialog v-else-if="mode === 'phone-camera'" />
 </template>

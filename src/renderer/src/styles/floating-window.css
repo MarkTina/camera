@@ -232,6 +232,11 @@
   outline: none;
 }
 
+.toolbar-select option {
+  color: #1f2933;
+  background: #ffffff;
+}
+
 .toolbar-range {
   display: flex;
   flex: none;
@@ -248,6 +253,17 @@
 .toolbar-range input {
   width: 64px;
   accent-color: #ffffff;
+}
+
+.toolbar-range.rotation-range {
+  min-width: 132px;
+}
+
+.rotation-range output {
+  width: 34px;
+  color: rgba(255, 255, 255, 0.9);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 .floating-toolbar button:hover,

@@ -98,6 +98,40 @@ const annotation = {
   }
 }
 
+const phoneCamera = {
+  openDialog: (): Promise<void> => ipcRenderer.invoke('phone-camera:open-dialog'),
+  startService: (): Promise<PhoneCameraState> => ipcRenderer.invoke('phone-camera:start-service'),
+  stopService: (): Promise<void> => ipcRenderer.invoke('phone-camera:stop-service'),
+  getState: (): Promise<PhoneCameraState> => ipcRenderer.invoke('phone-camera:get-state'),
+  selectAddress: (address: string): Promise<PhoneCameraState> =>
+    ipcRenderer.invoke('phone-camera:select-address', address),
+  connectDesktop: (): Promise<boolean> => ipcRenderer.invoke('phone-camera:connect-desktop'),
+  disconnectDesktop: (): void => ipcRenderer.send('phone-camera:disconnect-desktop'),
+  sendSignal: (message: string): void => ipcRenderer.send('phone-camera:send-signal', message),
+  reportStreaming: (): void => ipcRenderer.send('phone-camera:report-streaming'),
+  onSignal: (callback: (message: string) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, message: string): void =>
+      callback(message)
+    ipcRenderer.on('phone-camera:signal', listener)
+    return () => ipcRenderer.removeListener('phone-camera:signal', listener)
+  },
+  onState: (callback: (state: PhoneCameraState) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, state: PhoneCameraState): void =>
+      callback(state)
+    ipcRenderer.on('phone-camera:state', listener)
+    return () => ipcRenderer.removeListener('phone-camera:state', listener)
+  }
+}
+
+interface PhoneCameraState {
+  status: 'idle' | 'ready' | 'phone-connected' | 'streaming' | 'error'
+  url: string
+  qrCodeDataUrl: string
+  message: string
+  availableAddresses: string[]
+  selectedAddress: string
+}
+
 // Use `contextBridge` APIs to expose Electron APIs to
 // renderer only if context isolation is enabled, otherwise
 // just add to the DOM global.
@@ -106,6 +140,7 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld('electron', electronAPI)
     contextBridge.exposeInMainWorld('cameraWindow', cameraWindow)
     contextBridge.exposeInMainWorld('annotation', annotation)
+    contextBridge.exposeInMainWorld('phoneCamera', phoneCamera)
   } catch (error) {
     console.error(error)
   }
@@ -116,4 +151,6 @@ if (process.contextIsolated) {
   window.cameraWindow = cameraWindow
   // @ts-ignore (define in dts)
   window.annotation = annotation
+  // @ts-ignore (define in dts)
+  window.phoneCamera = phoneCamera
 }

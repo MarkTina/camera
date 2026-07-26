@@ -48,10 +48,34 @@ interface AnnotationAPI {
   onSessionOpen: (callback: (isOpen: boolean) => void) => () => void
 }
 
+interface PhoneCameraState {
+  status: 'idle' | 'ready' | 'phone-connected' | 'streaming' | 'error'
+  url: string
+  qrCodeDataUrl: string
+  message: string
+  availableAddresses: string[]
+  selectedAddress: string
+}
+
+interface PhoneCameraAPI {
+  openDialog: () => Promise<void>
+  startService: () => Promise<PhoneCameraState>
+  stopService: () => Promise<void>
+  getState: () => Promise<PhoneCameraState>
+  selectAddress: (address: string) => Promise<PhoneCameraState>
+  connectDesktop: () => Promise<boolean>
+  disconnectDesktop: () => void
+  sendSignal: (message: string) => void
+  reportStreaming: () => void
+  onSignal: (callback: (message: string) => void) => () => void
+  onState: (callback: (state: PhoneCameraState) => void) => () => void
+}
+
 declare global {
   interface Window {
     electron: ElectronAPI
     cameraWindow: CameraWindowAPI
     annotation: AnnotationAPI
+    phoneCamera: PhoneCameraAPI
   }
 }

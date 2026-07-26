@@ -135,7 +135,8 @@ function createCameraToolbarWindow(isAlwaysOnTop: boolean): BrowserWindow {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false
+      sandbox: false,
+      backgroundThrottling: false
     }
   })
   cameraToolbarWindow = window
@@ -213,7 +214,8 @@ export function createFloatingCameraWindow(): BrowserWindow {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false
+      sandbox: false,
+      backgroundThrottling: false
     }
   })
 

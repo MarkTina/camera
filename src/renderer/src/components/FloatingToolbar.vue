@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useCameraStream } from '../composables/useCameraStream'
+import { onVideoDevicesChanged, useCameraStream } from '../composables/useCameraStream'
+import { PHONE_CAMERA_DEVICE_ID } from '../composables/usePhoneCameraStream'
 import { useWindowControls } from '../composables/useWindowControls'
 import { useCameraWindowStore, type CameraShape } from '../stores/cameraWindowStore'
 
@@ -16,7 +17,8 @@ const {
   hasShadow,
   cropZoom,
   cropOffsetX,
-  cropOffsetY
+  cropOffsetY,
+  rotation
 } = storeToRefs(cameraStore)
 const { closeWindow, getAlwaysOnTop, getSizeState, setAlwaysOnTop, setSize, setToolbarHovered } =
   useWindowControls()
@@ -26,8 +28,12 @@ const minCameraSize = ref(180)
 const maxCameraSize = ref(540)
 const annotationSessionOpen = ref(false)
 const isCropEditing = ref(false)
+const isRotationEditing = ref(false)
+const phoneCameraStatus = ref<'idle' | 'ready' | 'phone-connected' | 'streaming' | 'error'>('idle')
 let removeAnnotationSessionListener: (() => void) | null = null
 let removeSizeStateListener: (() => void) | null = null
+let removeVideoDevicesListener: (() => void) | null = null
+let removePhoneCameraStateListener: (() => void) | null = null
 
 const shapeOptions: Array<{ value: CameraShape; label: string }> = [
   { value: 'circle', label: '圆' },
@@ -53,6 +59,20 @@ function handleCropZoomInput(event: Event): void {
 
 function handleCropOffsetInput(axis: 'x' | 'y', event: Event): void {
   cameraStore.setCropOffset(axis, Number((event.target as HTMLInputElement).value))
+}
+
+function handleRotationInput(event: Event): void {
+  cameraStore.setRotation(Number((event.target as HTMLInputElement).value))
+}
+
+function toggleCropEditing(): void {
+  isCropEditing.value = !isCropEditing.value
+  if (isCropEditing.value) isRotationEditing.value = false
+}
+
+function toggleRotationEditing(): void {
+  isRotationEditing.value = !isRotationEditing.value
+  if (isRotationEditing.value) isCropEditing.value = false
 }
 
 const cropOffsetLimit = computed(() => (cropZoom.value - 1) * 50)
@@ -86,10 +106,19 @@ async function toggleAlwaysOnTop(): Promise<void> {
   cameraStore.setAlwaysOnTop(enabled)
 }
 
+async function openPhoneCameraDialog(): Promise<void> {
+  await window.phoneCamera.openDialog()
+}
+
 onMounted(async () => {
   cameraStore.setAlwaysOnTop(await getAlwaysOnTop())
   await syncCameraSize()
   removeSizeStateListener = window.cameraWindow.onSizeState(applyCameraSizeState)
+  removeVideoDevicesListener = onVideoDevicesChanged(refreshVideoDevices)
+  phoneCameraStatus.value = (await window.phoneCamera.getState()).status
+  removePhoneCameraStateListener = window.phoneCamera.onState((state) => {
+    phoneCameraStatus.value = state.status
+  })
   annotationSessionOpen.value = await window.annotation.getSessionOpen()
   removeAnnotationSessionListener = window.annotation.onSessionOpen((isOpen) => {
     annotationSessionOpen.value = isOpen
@@ -102,6 +131,8 @@ onBeforeUnmount(() => {
   navigator.mediaDevices?.removeEventListener?.('devicechange', refreshVideoDevices)
   removeAnnotationSessionListener?.()
   removeSizeStateListener?.()
+  removeVideoDevicesListener?.()
+  removePhoneCameraStateListener?.()
 })
 </script>
 
@@ -129,6 +160,12 @@ onBeforeUnmount(() => {
         >
           {{ getDeviceLabel(device, index) }}
         </option>
+        <option
+          v-if="phoneCameraStatus === 'phone-connected' || phoneCameraStatus === 'streaming'"
+          :value="PHONE_CAMERA_DEVICE_ID"
+        >
+          手机摄像头{{ phoneCameraStatus === 'streaming' ? '（传输中）' : '（已连接）' }}
+        </option>
       </select>
 
       <div class="toolbar-group" aria-label="窗口形态">
@@ -155,6 +192,16 @@ onBeforeUnmount(() => {
 
       <button
         type="button"
+        :class="{ active: isRotationEditing || rotation !== 0 }"
+        :title="isRotationEditing ? '完成视频旋转' : `旋转视频（当前 ${rotation}°）`"
+        :aria-pressed="isRotationEditing"
+        @click="toggleRotationEditing"
+      >
+        旋
+      </button>
+
+      <button
+        type="button"
         :class="{ active: isAlwaysOnTop }"
         :title="isAlwaysOnTop ? '取消置顶' : '窗口置顶'"
         @click="toggleAlwaysOnTop"
@@ -167,13 +214,15 @@ onBeforeUnmount(() => {
         :class="{ active: isCropEditing }"
         :title="isCropEditing ? '完成画面裁剪' : '调整画面裁剪'"
         :aria-pressed="isCropEditing"
-        @click="isCropEditing = !isCropEditing"
+        @click="toggleCropEditing"
       >
         裁
       </button>
+
+      <button type="button" title="使用手机摄像头" @click="openPhoneCameraDialog">手机</button>
     </div>
 
-    <div v-if="!isCropEditing" class="camera-toolbar-row">
+    <div v-if="!isCropEditing && !isRotationEditing" class="camera-toolbar-row">
       <label class="toolbar-range" title="窗口透明度">
         <span>透</span>
         <input
@@ -234,7 +283,7 @@ onBeforeUnmount(() => {
       <button type="button" class="danger" title="关闭窗口" @click="closeWindow">关</button>
     </div>
 
-    <div v-else class="camera-toolbar-row">
+    <div v-else-if="isCropEditing" class="camera-toolbar-row">
       <label class="toolbar-range" title="放大画面以裁去黑边">
         <span>放</span>
         <input
@@ -280,6 +329,24 @@ onBeforeUnmount(() => {
       </label>
 
       <button type="button" title="恢复完整画面" @click="cameraStore.resetCrop">复</button>
+    </div>
+
+    <div v-else class="camera-toolbar-row">
+      <label class="toolbar-range rotation-range" title="选择视频旋转角度">
+        <span>角</span>
+        <input
+          type="range"
+          min="0"
+          max="360"
+          step="1"
+          :value="rotation"
+          aria-label="视频旋转角度"
+          @input="handleRotationInput"
+          @pointerdown.stop
+        />
+        <output>{{ rotation }}°</output>
+      </label>
+      <button type="button" title="恢复为 0 度" @click="cameraStore.setRotation(0)">复</button>
     </div>
   </nav>
 </template>

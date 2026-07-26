@@ -12,6 +12,7 @@ interface CameraWindowSettings {
   cropZoom: number
   cropOffsetX: number
   cropOffsetY: number
+  rotation: number
 }
 
 const STORAGE_KEY = 'camera-window-settings'
@@ -25,7 +26,8 @@ const DEFAULT_SETTINGS: CameraWindowSettings = {
   hasShadow: false,
   cropZoom: 1,
   cropOffsetX: 0,
-  cropOffsetY: 0
+  cropOffsetY: 0,
+  rotation: 0
 }
 
 function readStoredSettings(): Partial<CameraWindowSettings> {
@@ -68,6 +70,7 @@ export const useCameraWindowStore = defineStore('cameraWindow', {
       this.cropZoom = settings.cropZoom ?? DEFAULT_SETTINGS.cropZoom
       this.cropOffsetX = settings.cropOffsetX ?? DEFAULT_SETTINGS.cropOffsetX
       this.cropOffsetY = settings.cropOffsetY ?? DEFAULT_SETTINGS.cropOffsetY
+      this.rotation = settings.rotation ?? DEFAULT_SETTINGS.rotation
     },
     persistSettings(): void {
       const settings: CameraWindowSettings = {
@@ -79,7 +82,8 @@ export const useCameraWindowStore = defineStore('cameraWindow', {
         hasShadow: this.hasShadow,
         cropZoom: this.cropZoom,
         cropOffsetX: this.cropOffsetX,
-        cropOffsetY: this.cropOffsetY
+        cropOffsetY: this.cropOffsetY,
+        rotation: this.rotation
       }
 
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))
@@ -132,6 +136,10 @@ export const useCameraWindowStore = defineStore('cameraWindow', {
       this.cropZoom = DEFAULT_SETTINGS.cropZoom
       this.cropOffsetX = DEFAULT_SETTINGS.cropOffsetX
       this.cropOffsetY = DEFAULT_SETTINGS.cropOffsetY
+      this.persistSettings()
+    },
+    setRotation(rotation: number): void {
+      this.rotation = Math.min(360, Math.max(0, Math.round(rotation)))
       this.persistSettings()
     },
     clampCropOffsets(): void {

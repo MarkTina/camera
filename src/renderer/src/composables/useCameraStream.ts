@@ -35,6 +35,19 @@ const activeDeviceId = ref('')
 const videoDevices = ref<MediaDeviceInfo[]>([])
 const errorMessage = ref('')
 const isLoading = ref(false)
+const DEVICE_LIST_CHANNEL = 'camera-device-list-sync'
+
+function notifyVideoDevicesChanged(): void {
+  const channel = new BroadcastChannel(DEVICE_LIST_CHANNEL)
+  channel.postMessage(null)
+  channel.close()
+}
+
+export function onVideoDevicesChanged(callback: () => void): () => void {
+  const channel = new BroadcastChannel(DEVICE_LIST_CHANNEL)
+  channel.addEventListener('message', callback)
+  return () => channel.close()
+}
 
 export function useCameraStream(): CameraStreamState {
   async function refreshVideoDevices(): Promise<void> {
@@ -81,6 +94,7 @@ export function useCameraStream(): CameraStreamState {
       })
       activeDeviceId.value = deviceId
       await refreshVideoDevices()
+      notifyVideoDevicesChanged()
       return stream.value
     } catch (error) {
       errorMessage.value = getCameraErrorMessage(error)
